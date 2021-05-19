@@ -1,10 +1,15 @@
-FROM postgres:10 
+FROM ruby:2.6.6
 
-RUN apt-get update &&  apt-get install -y openssl curl procps
+RUN apt-get update \
+  && apt-get install -y postgresql postgresql-contrib nodejs npm sudo xvfb \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN \curl -sSL https://rvm.io/mpapis.asc | gpg --import - && \
-    \curl -sSL https://rvm.io/pkuczynski.asc | gpg --import - && \
-    \curl -L https://get.rvm.io | bash -s stable && \
-    /bin/bash -l -c "rvm requirements" && \
-    /bin/bash -l -c "rvm install 2.6" && \
-    /bin/bash -l -c "gem install bundler"
+
+RUN service postgresql start \
+    && sudo -u postgres psql postgres -c "ALTER ROLE postgres WITH PASSWORD 'postgres';" \
+    && sudo -u postgres psql postgres -c "UPDATE pg_database SET datistemplate = FALSE WHERE datname = 'template1'" \
+    && sudo -u postgres psql postgres -c "DROP DATABASE template1;" \
+    && sudo -u postgres psql postgres -c "CREATE DATABASE template1 WITH TEMPLATE = template0 ENCODING = 'UTF-8';" \
+    && sudo -u postgres psql postgres -c "UPDATE pg_database SET datistemplate = TRUE WHERE datname = 'template1';" \
+    && service postgresql stop
